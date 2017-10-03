@@ -3,14 +3,15 @@
 #include <QtSerialPort/QSerialPortInfo>
 #include <QDebug>
 #include <QTime>
+#include <QNetworkDatagram>
 
 #define def(a,b) \
     pComboBoxArr[a] = ui->comComboBox_##b; \
     pOpenComButtonArr[a] = ui->pushButtonComOpen_##b; \
     pPlainTextEditArr[a] = ui->plainTextEdit_##b; \
     pLineEditStatus[a] = ui->lineEditStatus_##b; \
-    pOnButtonErr[a] =  ui->pushButtonOn_##b; \
-    pOffButtonErr[a] =  ui->pushButtonOff_##b
+    pOnButtonArr[a] =  ui->pushButtonOn_##b; \
+    pOffButtonArr[a] =  ui->pushButtonOff_##b
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -27,11 +28,9 @@ MainWindow::MainWindow(QWidget *parent) :
     palette->setColor(QPalette::Base,Qt::lightGray);
 
     for(int i=0; i<PROJ_NUM; i++){
-        QPushButton *pb = pOpenComButtonArr[i];
-        //connect(pb, SIGNAL(clicked(bool)),
-        //        &comOpenButtonMapper, SLOT(map()));
-        connect(pb, &QPushButton::clicked, [this, i](){ on_pushButtonComOpen_clicked(i);} );
-        //comOpenButtonMapper.setMapping(pb, i);
+        connect(pOpenComButtonArr[i], &QPushButton::clicked, [this, i](){ pushButtonComOpen_clicked(i);} );
+        connect(pOnButtonArr[i], &QPushButton::clicked,  [this, i](){ pushButtonOn_clicked(i);} );
+        connect(pOffButtonArr[i], &QPushButton::clicked,  [this, i](){ pushButtonOff_clicked(i);} );
 
         pLineEditStatus[i]->setText("n/a");
         pLineEditStatus[i]->setPalette(*palette);
@@ -47,6 +46,11 @@ MainWindow::MainWindow(QWidget *parent) :
     comSendAliveTimer.setInterval(1000);
     comSendAliveTimer.start();
     on_pushButton_refreshCom_clicked();
+
+    udpSocket = new QUdpSocket(this);
+    udpSocket->bind(QHostAddress::LocalHost, 8052);
+    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(handleUdpReadyRead()));
+
 }
 
 MainWindow::~MainWindow()
@@ -54,7 +58,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_pushButtonComOpen_clicked(int id)
+void MainWindow::pushButtonComOpen_clicked(int id)
 {
    serialArr[id]->setBaudRate(115200);
    QPushButton *pb = pOpenComButtonArr[id];
@@ -125,22 +129,47 @@ void MainWindow::handleReadyRead(int id)
 
 void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
 {
-    qDebug() <<"!!!!!!!" << id <<error;
-}
+    if(error != QSerialPort::NoError){
+        QString errorStr;
+        switch(error){
+            case QSerialPort::DeviceNotFoundError: errorStr = "DeviceNotFoundError"; break;
+            case QSerialPort::PermissionError: errorStr = "PermissionError"; break;
+            case QSerialPort::OpenError: errorStr = "OpenError"; break;
+            case QSerialPort::ParityError: errorStr = "ParityError"; break;
+            case QSerialPort::FramingError: errorStr = "FramingError"; break;
+            case QSerialPort::BreakConditionError: errorStr = "BreakConditionError"; break;
+            case QSerialPort::WriteError: errorStr = "WriteError"; break;
+            case QSerialPort::ReadError: errorStr = "ReadError"; break;
+            case QSerialPort::ResourceError: errorStr = "ResourceError"; break;
+            case QSerialPort::UnsupportedOperationError: errorStr = "UnsupportedOperationError"; break;
+            case QSerialPort::UnknownError: errorStr = "UnknownError"; break;
+            case QSerialPort::TimeoutError: errorStr = "TimeoutError"; break;
+            case QSerialPort::NotOpenError: errorStr = "NotOpenError"; break;
+        }
 
-
-void MainWindow::on_pushButtonOn_clicked()
-{
-    if(serialArr[0]->isOpen()){
-        serialArr[0]->write(QString("\r*pow=on#\r").toLatin1());
+        QString msg = QString("%1 error: %2").arg(qUtf8Printable(serialArr[id]->portName())).arg(errorStr);
+        pPlainTextEditArr[id]->appendPlainText(msg);
+        qDebug() <<"!!!!!!!" << id <<error;
+        if(error == QSerialPort::ResourceError){
+            pushButtonComOpen_clicked(id);
+        }
     }
 }
 
-void MainWindow::on_pushButtonOff_clicked()
+
+void MainWindow::pushButtonOn_clicked(int id)
 {
-    if(serialArr[0]->isOpen()){
-        qint64 iWritten = serialArr[0]->write(QString("\r*pow=off#\r").toLatin1());
-        qDebug() << iWritten;
+    if(serialArr[id]->isOpen()){
+        qint64 iWritten = serialArr[id]->write(QString("\r*pow=on#\r").toLatin1());
+        qDebug() << id << iWritten;
+    }
+}
+
+void MainWindow::pushButtonOff_clicked(int id)
+{
+    if(serialArr[id]->isOpen()){
+        qint64 iWritten = serialArr[id]->write(QString("\r*pow=off#\r").toLatin1());
+        qDebug() << id << iWritten;
     }
 }
 
@@ -176,6 +205,13 @@ void MainWindow::on_pushButton_refreshCom_clicked()
            }
 
     }
+}
 
+void MainWindow::handleUdpReadyRead()
+{
+    while (udpSocket->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = udpSocket->receiveDatagram();
+        //processTheDatagram(datagram);
+    }
 }
 

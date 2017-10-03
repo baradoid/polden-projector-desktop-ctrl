@@ -7,6 +7,7 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QPlainTextEdit>
+#include <QUdpSocket>
 
 namespace Ui {
 class MainWindow;
@@ -26,10 +27,12 @@ private slots:
     void handleReadyRead(int);
     void handleErrorOccured(int, QSerialPort::SerialPortError);
 
-    void on_pushButtonComOpen_clicked(int);
-    void on_pushButtonOn_clicked();
-    void on_pushButtonOff_clicked();
+    void pushButtonComOpen_clicked(int);
+    void pushButtonOn_clicked(int);
+    void pushButtonOff_clicked(int);
     void on_pushButton_refreshCom_clicked();
+
+    void handleUdpReadyRead();
 
 private:
     Ui::MainWindow *ui;
@@ -39,10 +42,11 @@ private:
     QTimer comSendAliveTimer;
     QComboBox *pComboBoxArr[PROJ_NUM];
     QPushButton *pOpenComButtonArr[PROJ_NUM];
-    QPushButton *pOnButtonErr[PROJ_NUM], *pOffButtonErr[PROJ_NUM];
+    QPushButton *pOnButtonArr[PROJ_NUM], *pOffButtonArr[PROJ_NUM];
     QPlainTextEdit *pPlainTextEditArr[PROJ_NUM];
     QLineEdit *pLineEditStatus[PROJ_NUM];
 
+    QUdpSocket *udpSocket;
 
 #define BUF_SIZE 500
     char buf[500];
