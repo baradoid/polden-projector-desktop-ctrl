@@ -8,14 +8,13 @@
     pComboBoxArr[a] = ui->comComboBox_##b; \
     pOpenComButtonArr[a] = ui->pushButtonComOpen_##b; \
     pPlainTextEditArr[a] = ui->plainTextEdit_##b; \
-    pLineEditStatus[a] = ui->lineEditStatus_##b
+    pLineEditStatus[a] = ui->lineEditStatus_##b; \
+    pOnButtonErr[a] =  ui->pushButtonOn_##b; \
+    pOffButtonErr[a] =  ui->pushButtonOff_##b
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    comOpenButtonMapper(this),
-    serialReadyReadMapper(this),
-    serialErrorOccuredMapper(this)
+    ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -24,27 +23,30 @@ MainWindow::MainWindow(QWidget *parent) :
     def(2, 3);
     def(3, 4);
 
+    QPalette *palette = new QPalette();
+    palette->setColor(QPalette::Base,Qt::lightGray);
+
     for(int i=0; i<PROJ_NUM; i++){
-        connect(pOpenComButtonArr[i], SIGNAL(clicked()),
-                &comOpenButtonMapper, SLOT(map()));
-        comOpenButtonMapper.setMapping(pOpenComButtonArr[i], i);
+        QPushButton *pb = pOpenComButtonArr[i];
+        //connect(pb, SIGNAL(clicked(bool)),
+        //        &comOpenButtonMapper, SLOT(map()));
+        connect(pb, &QPushButton::clicked, [this, i](){ on_pushButtonComOpen_clicked(i);} );
+        //comOpenButtonMapper.setMapping(pb, i);
+
+        pLineEditStatus[i]->setText("n/a");
+        pLineEditStatus[i]->setPalette(*palette);
 
         QSerialPort *sp = new QSerialPort(this);
         serialArr[i] = sp;
-        connect(sp, SIGNAL(readyRead()), &serialReadyReadMapper, SLOT(map()));
-        connect(sp, SIGNAL(readyRead()), &serialErrorOccuredMapper, SLOT(map()));
-        serialReadyReadMapper.setMapping(sp, i);
-        serialErrorOccuredMapper.setMapping(sp, i);
+        connect(sp, &QSerialPort::readyRead, [this, i](){ handleReadyRead(i);});
+        //connect(sp, SIGNAL(errorOccurred(QSerialPort::SerialPortError)), &serialErrorOccuredMapper, SLOT(map()));
+        connect(sp, &QSerialPort::errorOccurred, [this, i](QSerialPort::SerialPortError error){ handleErrorOccured(i, error);});
     }
-
-    connect(&comOpenButtonMapper, SIGNAL(mapped(int)), this, SLOT(on_pushButtonComOpen_clicked(int)));
-
-    connect(&serialReadyReadMapper, SIGNAL(mapped(int)), this, SLOT(handleReadyRead(int)));
-    connect(&serialErrorOccuredMapper, SIGNAL(mapped(int)), this, SLOT(handleErrorOccured(int,QSerialPort::SerialPortError)));
 
     connect(&comSendAliveTimer, SIGNAL(timeout()), this, SLOT(sendAliveTimerHandle()));
     comSendAliveTimer.setInterval(1000);
     comSendAliveTimer.start();
+    on_pushButton_refreshCom_clicked();
 }
 
 MainWindow::~MainWindow()
@@ -67,22 +69,29 @@ void MainWindow::on_pushButtonComOpen_clicked(int id)
                 serialArr[id]->setPortName(comName);
                 if (!serialArr[id]->open(QIODevice::ReadWrite)) {
                     //qDebug("%s port open FAIL", qUtf8Printable(comName));
-                    pPlainTextEditArr[id]->appendPlainText(QString("%1 port open FAIL").arg(qUtf8Printable(comName)));
+                    QString msg = QString("%1 open FAIL").arg(qUtf8Printable(comName));
+                    pPlainTextEditArr[id]->appendPlainText(QString("%1 open FAIL").arg(qUtf8Printable(comName)));
                     return;
                 }
-                //qDebug("%s port opened", qUtf8Printable(comName));
-                pPlainTextEditArr[id]->appendPlainText(QString("%1 port opened").arg(qUtf8Printable(comName)));
-                //ui->plainTextEdit->appendPlainText(QString("%1 port opened").arg(qUtf8Printable(comName)));
+                else{
+                    cb->setEnabled(false);
+                    //qDebug("%s port opened", qUtf8Printable(comName));
+                    QString msg = QString("%1 opened").arg(qUtf8Printable(comName));
+                    pPlainTextEditArr[id]->appendPlainText(msg);
+                    //ui->plainTextEdit->appendPlainText(QString("%1 port opened").arg(qUtf8Printable(comName)));
+                    ui->statusBar->showMessage(msg);
 
-                pb->setText("close");
-                comExchanges = 0;
-                //usbConnectionTime.start();
-                bufInd = 0;
+                    pb->setText("close");
+                    comExchanges = 0;
+                    //usbConnectionTime.start();
+                    bufInd = 0;
+                }
             }
         }
     }
     else{       
         serialArr[id]->close();
+        cb->setEnabled(true);
         //udpSocket->close();
         //qDebug("com port closed");
         pPlainTextEditArr[id]->appendPlainText(QString("%1 closed").arg(serialArr[id]->portName()));
@@ -116,7 +125,7 @@ void MainWindow::handleReadyRead(int id)
 
 void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
 {
-    qDebug() <<"!!!!!!!" <<error;
+    qDebug() <<"!!!!!!!" << id <<error;
 }
 
 
@@ -138,7 +147,8 @@ void MainWindow::on_pushButtonOff_clicked()
 void MainWindow::on_pushButton_refreshCom_clicked()
 {
     for(int i=0; i<PROJ_NUM; i++){
-        pComboBoxArr[i]->clear();
+        if(pComboBoxArr[i]->isEnabled())
+            pComboBoxArr[i]->clear();
     }
 
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
@@ -161,7 +171,8 @@ void MainWindow::on_pushButton_refreshCom_clicked()
                << QObject::tr("Busy: ") << (serialPortInfo.isBusy() ? QObject::tr("Yes") : QObject::tr("No")) << endl;
 
            for(int i=0; i<PROJ_NUM; i++){
-               pComboBoxArr[i]->addItem(serialPortInfo.portName());
+               if(pComboBoxArr[i]->isEnabled())
+                   pComboBoxArr[i]->addItem(serialPortInfo.portName());
            }
 
     }

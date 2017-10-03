@@ -5,7 +5,6 @@
 #include <QSerialPort>
 #include <QTimer>
 #include <QComboBox>
-#include <QSignalMapper>
 #include <QPushButton>
 #include <QPlainTextEdit>
 
@@ -40,12 +39,9 @@ private:
     QTimer comSendAliveTimer;
     QComboBox *pComboBoxArr[PROJ_NUM];
     QPushButton *pOpenComButtonArr[PROJ_NUM];
+    QPushButton *pOnButtonErr[PROJ_NUM], *pOffButtonErr[PROJ_NUM];
     QPlainTextEdit *pPlainTextEditArr[PROJ_NUM];
     QLineEdit *pLineEditStatus[PROJ_NUM];
-
-    QSignalMapper comOpenButtonMapper;
-    QSignalMapper serialReadyReadMapper;
-    QSignalMapper serialErrorOccuredMapper;
 
 
 #define BUF_SIZE 500
