@@ -34,8 +34,14 @@ private slots:
 
     void handleUdpReadyRead();
 
+    void on_pushButtonOpenAll_clicked();
+
+    void on_pushButtonCloseAll_clicked();
+
 private:
     Ui::MainWindow *ui;
+
+    void handleProjectorMessage(int id, QString msg);
 
     QSerialPort *serialArr[PROJ_NUM];
     quint32 comExchanges;
@@ -46,11 +52,20 @@ private:
     QPlainTextEdit *pPlainTextEditArr[PROJ_NUM];
     QLineEdit *pLineEditStatus[PROJ_NUM];
 
+
+
+
     QUdpSocket *udpSocket;
 
+    enum{
+        na=0,
+        noResp,
+        resp
+    }bResponseArr[PROJ_NUM];
 #define BUF_SIZE 500
-    char buf[500];
-    int bufInd;
+    QByteArray buf[PROJ_NUM];
+
+    QPalette *paletteGrey, *paletteRed, *paletteGreen;
 };
 
 #endif // MAINWINDOW_H

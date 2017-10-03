@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QTime>
 #include <QNetworkDatagram>
+#include <QSettings>
 
 #define def(a,b) \
     pComboBoxArr[a] = ui->comComboBox_##b; \
@@ -24,8 +25,13 @@ MainWindow::MainWindow(QWidget *parent) :
     def(2, 3);
     def(3, 4);
 
-    QPalette *palette = new QPalette();
-    palette->setColor(QPalette::Base,Qt::lightGray);
+    paletteGrey = new QPalette();
+    paletteGrey->setColor(QPalette::Base,Qt::lightGray);
+    paletteRed = new QPalette();
+    paletteRed->setColor(QPalette::Base,Qt::red);
+    paletteGreen = new QPalette();
+    paletteGreen->setColor(QPalette::Base,Qt::green);
+
 
     for(int i=0; i<PROJ_NUM; i++){
         connect(pOpenComButtonArr[i], &QPushButton::clicked, [this, i](){ pushButtonComOpen_clicked(i);} );
@@ -33,19 +39,33 @@ MainWindow::MainWindow(QWidget *parent) :
         connect(pOffButtonArr[i], &QPushButton::clicked,  [this, i](){ pushButtonOff_clicked(i);} );
 
         pLineEditStatus[i]->setText("n/a");
-        pLineEditStatus[i]->setPalette(*palette);
+        pLineEditStatus[i]->setPalette(*paletteGrey);
 
         QSerialPort *sp = new QSerialPort(this);
         serialArr[i] = sp;
         connect(sp, &QSerialPort::readyRead, [this, i](){ handleReadyRead(i);});
         //connect(sp, SIGNAL(errorOccurred(QSerialPort::SerialPortError)), &serialErrorOccuredMapper, SLOT(map()));
         connect(sp, &QSerialPort::errorOccurred, [this, i](QSerialPort::SerialPortError error){ handleErrorOccured(i, error);});
+        bResponseArr[i] = na;
+    }
+    on_pushButton_refreshCom_clicked();
+
+    QSettings settings("Murinets", "ProjectorControl");
+
+    for(int i=0; i<PROJ_NUM; i++){
+        QString curComPortName = settings.value(QString("projector%1ComNum").arg(i), "").toString();
+        QComboBox *cb = pComboBoxArr[i];
+        for(int j=0; j<cb->count(); j++){
+            if(cb->itemText(j).compare(curComPortName) == 0){
+                cb->setCurrentIndex(j);
+                break;
+            }
+        }
     }
 
     connect(&comSendAliveTimer, SIGNAL(timeout()), this, SLOT(sendAliveTimerHandle()));
     comSendAliveTimer.setInterval(1000);
-    comSendAliveTimer.start();
-    on_pushButton_refreshCom_clicked();
+    comSendAliveTimer.start();    
 
     udpSocket = new QUdpSocket(this);
     udpSocket->bind(QHostAddress::LocalHost, 8052);
@@ -55,6 +75,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    QSettings settings("Murinets", "ProjectorControl");
+
+    for(int i=0; i<PROJ_NUM; i++){
+        settings.setValue(QString("projector%1ComNum").arg(i), pComboBoxArr[i]->currentText());
+    }
     delete ui;
 }
 
@@ -88,7 +113,8 @@ void MainWindow::pushButtonComOpen_clicked(int id)
                     pb->setText("close");
                     comExchanges = 0;
                     //usbConnectionTime.start();
-                    bufInd = 0;
+                    //bufInd = 0;
+                    buf[id].clear();
                 }
             }
         }
@@ -106,25 +132,61 @@ void MainWindow::pushButtonComOpen_clicked(int id)
 
 void MainWindow::sendAliveTimerHandle()
 {
-    if(serialArr[0]->isOpen()){
-        qint64 iWritten = serialArr[0]->write(QString("\r*pow=?#\r").toLatin1());
-        qDebug() << QTime::currentTime().msecsSinceStartOfDay() << "timeout" << iWritten;
+    for(int i=0; i<PROJ_NUM; i++){
+        if(serialArr[i]->isOpen()){
+            qint64 iWritten = serialArr[i]->write(QString("\r*pow=?#\r").toLatin1());
+            //qDebug() << QTime::currentTime().msecsSinceStartOfDay() << "timeout" << iWritten;
+
+            if(bResponseArr[i] == noResp)
+                pLineEditStatus[i]->setPalette(*paletteRed);
+            //else
+            //    pLineEditStatus[i]->setPalette(*paletteGrey);
+            bResponseArr[i] = noResp;
+        }
     }
 }
+
+void MainWindow::handleProjectorMessage(int id, QString msg)\
+{
+    bResponseArr[id] = resp;
+    pLineEditStatus[id]->setPalette(*paletteGreen);
+    pLineEditStatus[id]->setText(msg);
+    if(msg.compare("*POW=OFF#\r\n") == 0){
+    }
+    else if(msg.compare("*POW=ON#\r\n") == 0){
+    }
+    else if(msg.compare("*Block item#\r\n")){
+    }
+}
+
 
 void MainWindow::handleReadyRead(int id)
 {
     QByteArray ba = serialArr[id]->readAll();
-    for(int i=0; i<ba.length(); i++){
-        buf[bufInd++] = ba[i];
-        if( (buf[bufInd-1] == '\n') ||
-            (bufInd == BUF_SIZE) ){
-            buf[bufInd] = 0;
-            qDebug() << buf;
-            bufInd = 0;
-        }
+    buf[id].append(ba);
+    while(1){
+        int ind = buf[id].indexOf('\n');
+        if(ind == -1)
+            break;
+        //QString msg(buf[id].left(ind+1));
+        //qDebug() << msg;
+        handleProjectorMessage(id, QString(buf[id].left(ind+1)));
+        buf[id].remove(0, ind+1);
     }
-    qDebug() << "*";
+    if(buf[id].length() > BUF_SIZE){
+        buf[id].remove(0, buf[id].length() - BUF_SIZE);
+    }
+
+//    for(int i=0; i<ba.length(); i++){
+//        buf[bufInd++] = ba[i];
+//        if( (buf[bufInd-1] == '\n') ||
+//            (bufInd == BUF_SIZE) ){
+//            buf[bufInd] = 0;
+//            qDebug() << buf;
+//            bufInd = 0;
+//        }
+//    }
+//    qDebug() << "*";
 }
 
 void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
@@ -141,15 +203,17 @@ void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
             case QSerialPort::WriteError: errorStr = "WriteError"; break;
             case QSerialPort::ReadError: errorStr = "ReadError"; break;
             case QSerialPort::ResourceError: errorStr = "ResourceError"; break;
-            case QSerialPort::UnsupportedOperationError: errorStr = "UnsupportedOperationError"; break;
-            case QSerialPort::UnknownError: errorStr = "UnknownError"; break;
+            case QSerialPort::UnsupportedOperationError: errorStr = "UnsupportedOperationError"; break;            
             case QSerialPort::TimeoutError: errorStr = "TimeoutError"; break;
             case QSerialPort::NotOpenError: errorStr = "NotOpenError"; break;
+            default:
+            case QSerialPort::UnknownError: errorStr = "UnknownError"; break;
+
         }
 
         QString msg = QString("%1 error: %2").arg(qUtf8Printable(serialArr[id]->portName())).arg(errorStr);
         pPlainTextEditArr[id]->appendPlainText(msg);
-        qDebug() <<"!!!!!!!" << id <<error;
+        //qDebug() <<"!!!!!!!" << id <<error;
         if(error == QSerialPort::ResourceError){
             pushButtonComOpen_clicked(id);
         }
@@ -161,7 +225,7 @@ void MainWindow::pushButtonOn_clicked(int id)
 {
     if(serialArr[id]->isOpen()){
         qint64 iWritten = serialArr[id]->write(QString("\r*pow=on#\r").toLatin1());
-        qDebug() << id << iWritten;
+        //qDebug() << id << iWritten;
     }
 }
 
@@ -169,7 +233,7 @@ void MainWindow::pushButtonOff_clicked(int id)
 {
     if(serialArr[id]->isOpen()){
         qint64 iWritten = serialArr[id]->write(QString("\r*pow=off#\r").toLatin1());
-        qDebug() << id << iWritten;
+        //qDebug() << id << iWritten;
     }
 }
 
@@ -215,3 +279,17 @@ void MainWindow::handleUdpReadyRead()
     }
 }
 
+
+void MainWindow::on_pushButtonOpenAll_clicked()
+{
+    for(int i=0; i<PROJ_NUM; i++){
+        pushButtonComOpen_clicked(i);
+    }
+}
+
+void MainWindow::on_pushButtonCloseAll_clicked()
+{
+    for(int i=0; i<PROJ_NUM; i++){
+        pushButtonComOpen_clicked(i);
+    }
+}
