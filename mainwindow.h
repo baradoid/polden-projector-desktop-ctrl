@@ -4,10 +4,15 @@
 #include <QMainWindow>
 #include <QSerialPort>
 #include <QTimer>
+#include <QComboBox>
+#include <QSignalMapper>
+#include <QPushButton>
+#include <QPlainTextEdit>
 
 namespace Ui {
 class MainWindow;
 }
+#define PROJ_NUM 4
 
 class MainWindow : public QMainWindow
 {
@@ -17,12 +22,12 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 private slots:
-    void on_pushButtonComOpen_clicked();
+
     void sendAliveTimerHandle();
-    void handleReadyRead();
-    void handleErrorOccured(QSerialPort::SerialPortError);
+    void handleReadyRead(int);
+    void handleErrorOccured(int, QSerialPort::SerialPortError);
 
-
+    void on_pushButtonComOpen_clicked(int);
     void on_pushButtonOn_clicked();
     void on_pushButtonOff_clicked();
     void on_pushButton_refreshCom_clicked();
@@ -30,9 +35,18 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    QSerialPort serial;
+    QSerialPort *serialArr[PROJ_NUM];
     quint32 comExchanges;
     QTimer comSendAliveTimer;
+    QComboBox *pComboBoxArr[PROJ_NUM];
+    QPushButton *pOpenComButtonArr[PROJ_NUM];
+    QPlainTextEdit *pPlainTextEditArr[PROJ_NUM];
+    QLineEdit *pLineEditStatus[PROJ_NUM];
+
+    QSignalMapper comOpenButtonMapper;
+    QSignalMapper serialReadyReadMapper;
+    QSignalMapper serialErrorOccuredMapper;
+
 
 #define BUF_SIZE 500
     char buf[500];
