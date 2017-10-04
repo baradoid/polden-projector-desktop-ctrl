@@ -162,19 +162,25 @@
              <item>
               <widget class="QLabel" name="label">
                <property name="text">
-                <string>lamp hour,hour2</string>
+                <string>lamp h,h2</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEditLampHour1">
+              <widget class="QLineEdit" name="lineEditLampHour1_1">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEditLampHour2">
+              <widget class="QLineEdit" name="lineEditLampHour2_1">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -315,12 +321,15 @@
              <item>
               <widget class="QLabel" name="label_2">
                <property name="text">
-                <string>lamp hour,hour2</string>
+                <string>lamp h,h2</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour1_2">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -328,6 +337,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour2_2">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -468,12 +480,15 @@
              <item>
               <widget class="QLabel" name="label_3">
                <property name="text">
-                <string>lamp hour,hour2</string>
+                <string>lamp h,h2</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour1_3">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -481,6 +496,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour2_3">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -621,12 +639,15 @@
              <item>
               <widget class="QLabel" name="label_4">
                <property name="text">
-                <string>lamp hour,hour2</string>
+                <string>lamp h,h2</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour1_4">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -634,6 +655,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="lineEditLampHour2_4">
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>

@@ -12,11 +12,13 @@
     pPlainTextEditArr[a] = ui->plainTextEdit_##b; \
     pLineEditStatus[a] = ui->lineEditStatus_##b; \
     pOnButtonArr[a] =  ui->pushButtonOn_##b; \
-    pOffButtonArr[a] =  ui->pushButtonOff_##b
+    pOffButtonArr[a] =  ui->pushButtonOff_##b; \
+    pLineEditLampHour1Arr[a] = ui->lineEditLampHour1_##b
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    sendAliveCnt(0)
 {
     ui->setupUi(this);
 
@@ -131,10 +133,21 @@ void MainWindow::pushButtonComOpen_clicked(int id)
 }
 
 void MainWindow::sendAliveTimerHandle()
-{
+{   
+    QString msg;
+    switch(sendAliveCnt&3){
+    case 1: msg = QString("\r*ltim=?#\r"); break;
+    case 2: msg = QString("\r*ltim2=?#\r"); break;
+    case 0:
+    default:
+        msg = QString("\r*pow=?#\r");
+        break;
+
+    }
+
     for(int i=0; i<PROJ_NUM; i++){
         if(serialArr[i]->isOpen()){
-            qint64 iWritten = serialArr[i]->write(QString("\r*pow=?#\r").toLatin1());
+            qint64 iWritten = serialArr[i]->write(msg.toLatin1());
             //qDebug() << QTime::currentTime().msecsSinceStartOfDay() << "timeout" << iWritten;
 
             if(bResponseArr[i] == noResp)
@@ -144,18 +157,25 @@ void MainWindow::sendAliveTimerHandle()
             bResponseArr[i] = noResp;
         }
     }
+    sendAliveCnt++;
 }
 
 void MainWindow::handleProjectorMessage(int id, QString msg)\
 {
+    //qDebug() << msg;
     bResponseArr[id] = resp;
     pLineEditStatus[id]->setPalette(*paletteGreen);
-    pLineEditStatus[id]->setText(msg);
+
     if(msg.compare("*POW=OFF#\r\n") == 0){
+        pLineEditStatus[id]->setText(msg);
     }
     else if(msg.compare("*POW=ON#\r\n") == 0){
+        pLineEditStatus[id]->setText(msg);
     }
-    else if(msg.compare("*Block item#\r\n")){
+    else if(msg.compare("*Block item#\r\n") == 0){
+    }
+    else if(msg.startsWith("*LTIM")){
+        pLineEditLampHour1Arr[id]->setText(msg);
     }
 }
 
@@ -169,7 +189,7 @@ void MainWindow::handleReadyRead(int id)
         if(ind == -1)
             break;
         //QString msg(buf[id].left(ind+1));
-        //qDebug() << msg;
+
         handleProjectorMessage(id, QString(buf[id].left(ind+1)));
         buf[id].remove(0, ind+1);
     }
@@ -275,7 +295,21 @@ void MainWindow::handleUdpReadyRead()
 {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
-        //processTheDatagram(datagram);
+        QString msg(datagram.data());
+        //qDebug() << msg.toLatin1();
+        ui->statusBar->showMessage(QString("UDP cmd: \"%1\"").arg(msg));
+        if(msg.compare("pon_all\r\n") == 0){
+            //qDebug() << "pOn";
+            for(int i=0; i<PROJ_NUM; i++){
+                pushButtonOn_clicked(i);
+            }
+        }
+        else if(msg.compare("poff_all\r\n") == 0){
+            //qDebug() << "pOff";
+            for(int i=0; i<PROJ_NUM; i++){
+                pushButtonOff_clicked(i);
+            }
+        }
     }
 }
 

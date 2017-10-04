@@ -51,9 +51,7 @@ private:
     QPushButton *pOnButtonArr[PROJ_NUM], *pOffButtonArr[PROJ_NUM];
     QPlainTextEdit *pPlainTextEditArr[PROJ_NUM];
     QLineEdit *pLineEditStatus[PROJ_NUM];
-
-
-
+    QLineEdit *pLineEditLampHour1Arr[PROJ_NUM];
 
     QUdpSocket *udpSocket;
 
@@ -66,6 +64,8 @@ private:
     QByteArray buf[PROJ_NUM];
 
     QPalette *paletteGrey, *paletteRed, *paletteGreen;
+
+    quint32 sendAliveCnt;
 };
 
 #endif // MAINWINDOW_H
