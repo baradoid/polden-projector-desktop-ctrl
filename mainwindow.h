@@ -35,8 +35,10 @@ private slots:
     void handleUdpReadyRead();
 
     void on_pushButtonOpenAll_clicked();
-
     void on_pushButtonCloseAll_clicked();
+
+    void comPortClose(int id);
+    void comPortOpen(int id);
 
 private:
     Ui::MainWindow *ui;

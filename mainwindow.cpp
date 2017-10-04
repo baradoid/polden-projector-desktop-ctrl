@@ -85,6 +85,54 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+
+void MainWindow::comPortOpen(int id)
+{
+    QPushButton *pb = pOpenComButtonArr[id];
+    QComboBox *cb = pComboBoxArr[id];
+
+    if(serialArr[id]->isOpen() == false){
+        serialArr[id]->setBaudRate(115200);
+        QString comName = cb->currentText();
+        //QString comName("com9");
+        if(comName.length() > 0){
+            //UartThread.requestToStart(comName);
+            serialArr[id]->setPortName(comName);
+            if (!serialArr[id]->open(QIODevice::ReadWrite)) {
+                //qDebug("%s port open FAIL", qUtf8Printable(comName));
+                QString msg = QString("%1 open FAIL").arg(qUtf8Printable(comName));
+                pPlainTextEditArr[id]->appendPlainText(QString("%1 open FAIL").arg(qUtf8Printable(comName)));
+                return;
+            }
+            else{
+                cb->setEnabled(false);
+                //qDebug("%s port opened", qUtf8Printable(comName));
+                QString msg = QString("%1 opened").arg(qUtf8Printable(comName));
+                pPlainTextEditArr[id]->appendPlainText(msg);
+                //ui->plainTextEdit->appendPlainText(QString("%1 port opened").arg(qUtf8Printable(comName)));
+                ui->statusBar->showMessage(msg);
+
+                pb->setText("close");
+                comExchanges = 0;
+                //usbConnectionTime.start();
+                //bufInd = 0;
+                buf[id].clear();
+            }
+        }
+    }
+}
+
+void MainWindow::comPortClose(int id)
+{
+    pComboBoxArr[id]->setEnabled(true);
+    pOpenComButtonArr[id]->setText("open");
+    if(serialArr[id]->isOpen() == true){
+        pPlainTextEditArr[id]->appendPlainText(QString("%1 closed").arg(serialArr[id]->portName()));
+        serialArr[id]->close();
+    }
+}
+
+
 void MainWindow::pushButtonComOpen_clicked(int id)
 {
    serialArr[id]->setBaudRate(115200);
@@ -317,13 +365,13 @@ void MainWindow::handleUdpReadyRead()
 void MainWindow::on_pushButtonOpenAll_clicked()
 {
     for(int i=0; i<PROJ_NUM; i++){
-        pushButtonComOpen_clicked(i);
+        comPortOpen(i);
     }
 }
 
 void MainWindow::on_pushButtonCloseAll_clicked()
 {
     for(int i=0; i<PROJ_NUM; i++){
-        pushButtonComOpen_clicked(i);
+        comPortClose(i);
     }
 }
