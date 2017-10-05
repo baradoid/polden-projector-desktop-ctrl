@@ -130,6 +130,7 @@ void MainWindow::comPortClose(int id)
         pPlainTextEditArr[id]->appendPlainText(QString("%1 closed").arg(serialArr[id]->portName()));
         serialArr[id]->close();
     }
+    pLineEditStatus[id]->setPalette(*paletteRed);
 }
 
 
@@ -283,7 +284,8 @@ void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
         pPlainTextEditArr[id]->appendPlainText(msg);
         //qDebug() <<"!!!!!!!" << id <<error;
         if(error == QSerialPort::ResourceError){
-            pushButtonComOpen_clicked(id);
+            //pushButtonComOpen_clicked(id);
+            comPortClose(id);
         }
     }
 }
