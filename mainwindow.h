@@ -68,6 +68,8 @@ private:
     QPalette *paletteGrey, *paletteRed, *paletteGreen;
 
     quint32 sendAliveCnt;
+
+    QList<bool> bPowerOnList;
 };
 
 #endif // MAINWINDOW_H

@@ -63,6 +63,8 @@ MainWindow::MainWindow(QWidget *parent) :
                 break;
             }
         }
+        bool *bPon = new bool(false);
+        bPowerOnList.append(*bPon);
     }
 
     connect(&comSendAliveTimer, SIGNAL(timeout()), this, SLOT(sendAliveTimerHandle()));
@@ -183,18 +185,22 @@ void MainWindow::pushButtonComOpen_clicked(int id)
 
 void MainWindow::sendAliveTimerHandle()
 {   
-    QString msg;
-    switch(sendAliveCnt&3){
-    case 1: msg = QString("\r*ltim=?#\r"); break;
-    case 2: msg = QString("\r*ltim2=?#\r"); break;
-    case 0:
-    default:
-        msg = QString("\r*pow=?#\r");
-        break;
-
-    }
-
     for(int i=0; i<PROJ_NUM; i++){
+        QString msg = QString("\r*pow=?#\r");
+        if(bPowerOnList[i] == true){
+            switch(sendAliveCnt&3){
+            case 1: msg = QString("\r*ltim=?#\r"); break;
+            case 2: msg = QString("\r*ltim2=?#\r"); break;
+            case 0:
+            default:
+                msg = QString("\r*pow=?#\r");
+                break;
+            }
+        }
+        else{
+            msg = QString("\r*pow=?#\r");
+        }
+
         if(serialArr[i]->isOpen()){
             qint64 iWritten = serialArr[i]->write(msg.toLatin1());
             //qDebug() << QTime::currentTime().msecsSinceStartOfDay() << "timeout" << iWritten;
@@ -217,11 +223,14 @@ void MainWindow::handleProjectorMessage(int id, QString msg)\
 
     if(msg.compare("*POW=OFF#\r\n") == 0){
         pLineEditStatus[id]->setText(msg);
+        bPowerOnList[id] = false;
     }
     else if(msg.compare("*POW=ON#\r\n") == 0){
         pLineEditStatus[id]->setText(msg);
+        bPowerOnList[id] = true;
     }
     else if(msg.compare("*Block item#\r\n") == 0){
+        bPowerOnList[id] = false;
     }
     else if(msg.startsWith("*LTIM")){
         pLineEditLampHour1Arr[id]->setText(msg);
@@ -233,6 +242,7 @@ void MainWindow::handleReadyRead(int id)
 {
     QByteArray ba = serialArr[id]->readAll();
     buf[id].append(ba);
+    //qDebug() << qPrintable(ba);
     while(1){
         int ind = buf[id].indexOf('\n');
         if(ind == -1)
