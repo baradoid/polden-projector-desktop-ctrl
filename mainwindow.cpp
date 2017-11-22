@@ -17,15 +17,24 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
+    ui(new Ui::MainWindow),        
+    settings("murinets", "projector-ctrl"),
     sendAliveCnt(0)
 {
     ui->setupUi(this);
+
+    int locPort = settings.value("locPort", 8052).toInt();
+    int projCount = settings.value("projCount", 5).toInt();
+    projCount = PROJ_NUM;
+
+    ui->lineEditLocalPort->setText(QString("%1").arg(locPort));
+    ui->lineEditProjCount->setText(QString("%1").arg(projCount));
 
     def(0, 1);
     def(1, 2);
     def(2, 3);
     def(3, 4);
+    def(4, 5);
 
     paletteGrey = new QPalette();
     paletteGrey->setColor(QPalette::Base,Qt::lightGray);
@@ -52,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     on_pushButton_refreshCom_clicked();
 
-    QSettings settings("Murinets", "ProjectorControl");
+
 
     for(int i=0; i<PROJ_NUM; i++){
         QString curComPortName = settings.value(QString("projector%1ComNum").arg(i), "").toString();
@@ -63,6 +72,9 @@ MainWindow::MainWindow(QWidget *parent) :
                 break;
             }
         }
+    }
+
+    for(int i=0; i<PROJ_NUM; i++){
         bool *bPon = new bool(false);
         bPowerOnList.append(*bPon);
     }
@@ -72,14 +84,15 @@ MainWindow::MainWindow(QWidget *parent) :
     comSendAliveTimer.start();    
 
     udpSocket = new QUdpSocket(this);
-    udpSocket->bind(QHostAddress::LocalHost, 8052);
+    udpSocket->bind(QHostAddress::LocalHost, locPort);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(handleUdpReadyRead()));
-
 }
 
 MainWindow::~MainWindow()
 {
-    QSettings settings("Murinets", "ProjectorControl");
+    int projCount = ui->lineEditProjCount->text().toInt();
+    settings.setValue("locPort", ui->lineEditLocalPort->text().toInt());
+    settings.setValue("projCount", ui->lineEditProjCount->text().toInt());
 
     for(int i=0; i<PROJ_NUM; i++){
         settings.setValue(QString("projector%1ComNum").arg(i), pComboBoxArr[i]->currentText());
@@ -303,6 +316,7 @@ void MainWindow::handleErrorOccured(int id, QSerialPort::SerialPortError error)
 
 void MainWindow::pushButtonOn_clicked(int id)
 {
+    qDebug() << "but on" << id;
     if(serialArr[id]->isOpen()){
         qint64 iWritten = serialArr[id]->write(QString("\r*pow=on#\r").toLatin1());
         //qDebug() << id << iWritten;
@@ -311,6 +325,7 @@ void MainWindow::pushButtonOn_clicked(int id)
 
 void MainWindow::pushButtonOff_clicked(int id)
 {
+    qDebug() << "but off" << id;
     if(serialArr[id]->isOpen()){
         qint64 iWritten = serialArr[id]->write(QString("\r*pow=off#\r").toLatin1());
         //qDebug() << id << iWritten;
@@ -353,22 +368,53 @@ void MainWindow::on_pushButton_refreshCom_clicked()
 
 void MainWindow::handleUdpReadyRead()
 {
+    int projCount = ui->lineEditProjCount->text().toInt();
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
         QString msg(datagram.data());
         //qDebug() << msg.toLatin1();
         ui->statusBar->showMessage(QString("UDP cmd: \"%1\"").arg(msg));
-        if(msg.compare("pon_all\r\n") == 0){
-            //qDebug() << "pOn";
-            for(int i=0; i<PROJ_NUM; i++){
-                pushButtonOn_clicked(i);
+        if(msg.startsWith("pon_")){
+            qDebug() << "pon" << msg;
+            if(msg.compare("pon_all") == 0){
+                qDebug() << "pOnAll";
+                for(int i=0; i<PROJ_NUM; i++){
+                    pushButtonOn_clicked(i);
+                }
+            }
+            else{
+                for(int i=0; i<PROJ_NUM; i++){
+                    QString eq = QString("pon_%1").arg(i);
+                    if(msg.compare(eq) == 0){
+                        pushButtonOn_clicked(i);
+                    }
+                }
             }
         }
-        else if(msg.compare("poff_all\r\n") == 0){
-            //qDebug() << "pOff";
-            for(int i=0; i<PROJ_NUM; i++){
-                pushButtonOff_clicked(i);
+        else if(msg.startsWith("poff_")){
+            qDebug() << "poff" << msg;
+            if(msg.compare("poff_all") == 0){
+                qDebug() << "pOffAll";
+                for(int i=0; i<PROJ_NUM; i++){
+                    pushButtonOff_clicked(i);
+                }
             }
+            else{
+                for(int i=0; i<PROJ_NUM; i++){
+                    QString eq = QString("poff_%1").arg(i);
+                    if(msg.compare(eq) == 0){
+                        pushButtonOff_clicked(i);
+                    }
+                }
+            }
+        }
+        else if(msg.compare("stat?") == 0){
+            msg.clear();
+            for(int i=0; i<PROJ_NUM; i++){
+                msg.append(bPowerOnList[i]? "ON": "OFF");
+                msg.append(i<(projCount-1)?",":"");
+            }
+            udpSocket->writeDatagram(datagram.makeReply(qPrintable(msg)));
         }
     }
 }
@@ -376,6 +422,7 @@ void MainWindow::handleUdpReadyRead()
 
 void MainWindow::on_pushButtonOpenAll_clicked()
 {
+    int projCount = ui->lineEditProjCount->text().toInt();
     for(int i=0; i<PROJ_NUM; i++){
         comPortOpen(i);
     }
@@ -383,6 +430,7 @@ void MainWindow::on_pushButtonOpenAll_clicked()
 
 void MainWindow::on_pushButtonCloseAll_clicked()
 {
+    int projCount = ui->lineEditProjCount->text().toInt();
     for(int i=0; i<PROJ_NUM; i++){
         comPortClose(i);
     }

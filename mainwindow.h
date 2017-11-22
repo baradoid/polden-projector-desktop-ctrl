@@ -8,11 +8,12 @@
 #include <QPushButton>
 #include <QPlainTextEdit>
 #include <QUdpSocket>
+#include <QSettings>
 
 namespace Ui {
 class MainWindow;
 }
-#define PROJ_NUM 4
+#define PROJ_NUM 5
 
 class MainWindow : public QMainWindow
 {
@@ -43,6 +44,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
+    QSettings settings;
     void handleProjectorMessage(int id, QString msg);
 
     QSerialPort *serialArr[PROJ_NUM];
