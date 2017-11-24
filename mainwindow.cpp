@@ -203,7 +203,7 @@ void MainWindow::sendAliveTimerHandle()
         if(bPowerOnList[i] == true){
             switch(sendAliveCnt&3){
             case 1: msg = QString("\r*ltim=?#\r"); break;
-            case 2: msg = QString("\r*ltim2=?#\r"); break;
+            //case 2: msg = QString("\r*ltim2=?#\r"); break;
             case 0:
             default:
                 msg = QString("\r*pow=?#\r");
