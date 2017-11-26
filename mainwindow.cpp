@@ -86,6 +86,7 @@ MainWindow::MainWindow(QWidget *parent) :
     udpSocket = new QUdpSocket(this);
     udpSocket->bind(QHostAddress::LocalHost, locPort);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(handleUdpReadyRead()));
+    on_pushButtonOpenAll_clicked();
 }
 
 MainWindow::~MainWindow()
