@@ -41,6 +41,10 @@ private slots:
     void comPortClose(int id);
     void comPortOpen(int id);
 
+    void on_pushButtonAllOn_clicked();
+
+    void on_pushButtonAllOff_clicked();
+
 private:
     Ui::MainWindow *ui;
 

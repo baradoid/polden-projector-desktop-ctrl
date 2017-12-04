@@ -80,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     connect(&comSendAliveTimer, SIGNAL(timeout()), this, SLOT(sendAliveTimerHandle()));
-    comSendAliveTimer.setInterval(1000);
+    comSendAliveTimer.setInterval(500);
     comSendAliveTimer.start();    
 
     udpSocket = new QUdpSocket(this);
@@ -214,6 +214,7 @@ void MainWindow::sendAliveTimerHandle()
         else{
             msg = QString("\r*pow=?#\r");
         }
+        msg = QString("\r*pow=?#\r");
 
         if(serialArr[i]->isOpen()){
             qint64 iWritten = serialArr[i]->write(msg.toLatin1());
@@ -235,11 +236,13 @@ void MainWindow::handleProjectorMessage(int id, QString msg)\
     bResponseArr[id] = resp;
     pLineEditStatus[id]->setPalette(*paletteGreen);
 
-    if(msg.compare("*POW=OFF#\r\n") == 0){
+    if((msg.compare("*POW=OFF#\r\n") == 0) ||
+    (msg == "*POW=OFF#\r\r\n")){
         pLineEditStatus[id]->setText(msg);
         bPowerOnList[id] = false;
     }
-    else if(msg.compare("*POW=ON#\r\n") == 0){
+    else if((msg.compare("*POW=ON#\r\n") == 0) ||
+    (msg == "*POW=ON#\r\r\n")){
         pLineEditStatus[id]->setText(msg);
         bPowerOnList[id] = true;
     }
@@ -248,6 +251,17 @@ void MainWindow::handleProjectorMessage(int id, QString msg)\
     }
     else if(msg.startsWith("*LTIM")){
         pLineEditLampHour1Arr[id]->setText(msg);
+    }
+    else if ((msg==">*pow=?#\r\r\n") ||
+             (msg==">*pow=?#\r\n\r\n") ||
+             (msg==">*pow=?#\r\n") ||
+             (msg.length() == 0)){
+
+    }
+    else{
+        //msg = msg.toHtmlEscaped();
+        msg = "unrecognized:\"" + msg + "\"";
+        pPlainTextEditArr[id]->appendPlainText(msg);
     }
 }
 
@@ -435,4 +449,21 @@ void MainWindow::on_pushButtonCloseAll_clicked()
     for(int i=0; i<PROJ_NUM; i++){
         comPortClose(i);
     }
+}
+
+void MainWindow::on_pushButtonAllOn_clicked()
+{
+    for(int i=0; i<PROJ_NUM;i++){
+        pushButtonOn_clicked(i);
+
+    }
+
+}
+
+void MainWindow::on_pushButtonAllOff_clicked()
+{
+    for(int i=0; i<PROJ_NUM;i++){
+        pushButtonOff_clicked(i);
+    }
+
 }
