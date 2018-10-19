@@ -13,7 +13,7 @@
 namespace Ui {
 class MainWindow;
 }
-#define PROJ_NUM 5
+#define PROJ_NUM 4
 
 class MainWindow : public QMainWindow
 {

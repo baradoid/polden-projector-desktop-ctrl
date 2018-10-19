@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
     def(1, 2);
     def(2, 3);
     def(3, 4);
-    def(4, 5);
+    //def(4, 5);
 
     paletteGrey = new QPalette();
     paletteGrey->setColor(QPalette::Base,Qt::lightGray);
